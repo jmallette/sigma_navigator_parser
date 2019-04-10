@@ -21,6 +21,7 @@ for dp, dn, fn in os.walk(source_dir):
 # Go through file list and load YAML one file at a time
 for yaml_file in files_list:
     with open(yaml_file, 'r') as stream:
+        current_file = yaml_file.rsplit("\\", 1)[1]
         try:
             # Some YAML files have multiple YAML files in one, use load all
             full_yaml_data = list(yaml.safe_load_all(stream))
@@ -34,10 +35,12 @@ for yaml_file in files_list:
                         # If we find a technique ID, extract it and add/increment entry in TTP list
                         if ttp:
                             ttp_num = ttp[1]
-                            if not ttp_num in ttp_list:
-                                ttp_list[ttp_num] = 1
+                            if ttp_num not in ttp_list:
+                                ttp_list[ttp_num] = [1, []]
+                                ttp_list[ttp_num][1].append(current_file)
                             else:
-                                ttp_list[ttp_num] += 1
+                                ttp_list[ttp_num][0] += 1
+                                ttp_list[ttp_num][1].append(current_file)
         except yaml.YAMLError as exc:
             print(exc)
 
@@ -63,7 +66,8 @@ data['description'] = "Accurate to commit #: " + commit + '\n' \
 for technique in data['techniques']:
     ttp_id = technique['techniqueID'].lstrip("T")
     if ttp_id in ttp_list.keys():
-        technique['score'] = ttp_list[ttp_id]
+        technique['score'] = ttp_list[ttp_id][0]
+        technique['comment'] = "\n".join(ttp_list[ttp_id][1])
 
 # Dump updates into output layer
 with open("layer_test.json", "w") as output:
